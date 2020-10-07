@@ -1,0 +1,18 @@
+<html>
+<head>
+    <script src="ugly.js"></script>
+</head>
+<body>
+    <div id="logon_div">
+        <label for="room">Room</label><input id="room" value="test_room"/><br/>
+        <label for="name">Name</label><input id="name" value="test_user"/><br/>
+        <button onclick="logon()">Log On</button><br/><br/>
+    </div>
+    <div id="room_div" style="display: none">
+        <label for="dice"></label><input id="dice" value="1d20+3"/><br/>
+        <button onclick="roll()">Roll</button><br/><br/>
+        <textarea id="room_log" rows="30" cols="50"></textarea>
+    </div>
+
+</body>
+</html>

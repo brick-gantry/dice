@@ -16,7 +16,7 @@ class DiceServer:
         self.connections = set()
 
     def serve(self):
-        start_server = websockets.serve(self._socket_connect, "localhost", 8765)
+        start_server = websockets.serve(self._socket_connect, "0.0.0.0", 8765)
 
         asyncio.get_event_loop().run_until_complete(start_server)
         asyncio.get_event_loop().run_forever()
@@ -51,9 +51,10 @@ class DiceSocket:
                                   'logoff': self._do_logoff,
                                   'roll': self._do_roll}
                     resp = action_map[action](jreq)
-                    jresp = json.dumps(resp)
-                    await self.websocket.send(jresp)
-                except:
+                    if resp:
+                        jresp = json.dumps(resp)
+                        await self.websocket.send(jresp)
+                except Exception as e:
                     await self.websocket.send(f"Failed to handle request: {req}")
         except Exception as e:
             print(e)
@@ -65,13 +66,20 @@ class DiceSocket:
     def _do_logon(self, req):
         self.room = req['room']
         self.name = req['name']
-        self.pubsub = cache.pubsub()
+        self.pubsub = cache.pubsub(ignore_subscribe_messages=True)
 
-        async def handler(message):
-            await self.websocket.send(message['data'])
-        self.pubsub.subscribe(**{f"{self.room}-*": handler})
+        async def get_messages():
+            while self.pubsub:
+                message = self.pubsub.get_message()
+                if message:
+                    output = json.dumps({'action': 'append', 'message': message['data'].decode('utf-8')})
+                    await self.websocket.send(output)
+                await asyncio.sleep(1)
 
-        cache.publish(f"{self.room}-announce", f"{self.name} enters {self.room}")
+        self._push_to_log(f"{self.name} enters {self.room}")
+        self.pubsub.subscribe(f"{self.room}-announce")
+        asyncio.create_task(get_messages())
+
         cache.sadd(f"{self.room}-members", self.name)
         current_members = [m.decode('utf-8') for m in cache.smembers(f"{self.room}-members")]
         history = [h.decode('utf-8') for h in self._get_room_history()]
@@ -87,13 +95,18 @@ class DiceSocket:
         self.room = None
         self.name = None
         cache.srem(f"{self.room}-members", self.name)
-        cache.publish(f"{self.room}-announce", f"{self.name} leaves {self.room}")
+        self._push_to_log(f"{self.name} leaves {self.room}")
         self.pubsub.close()
         self.pubsub = None
         pass
 
     def _do_roll(self, req):
-        cache_key = f"{time.time()}:{self.room}"
         result = f"[{self.name}] {parser.parse(req['request'])}"
-        cache.set(cache_key, result, 60*60)  # keep history for one hour
-        return result
+        self._push_to_log(result)
+
+    def _push_to_log(self, text):
+        cache_key = f"{time.time()}:{self.room}"
+        cache_keep_duration = 60*60*3  # keep history for three hours
+        cache_keep_duration = 30
+        cache.publish(f"{self.room}-announce", text)
+        cache.set(cache_key, text, cache_keep_duration)
