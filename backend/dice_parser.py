@@ -1,14 +1,20 @@
 from random import randrange
 import re
+from typing import Optional
+from backend.dice_exception import DiceException
 
 
 class GenericDiceParser:
-    def parse(self, input: str) -> str:
+    @staticmethod
+    def parse(dice, purpose=None) -> Optional[str]:
+        if not dice:
+            return None
+
         total = 0
         rolls = []
 
         try:
-            terms = re.findall("[+-]?[^+-]+", input)
+            terms = re.findall("[+-]?[^+-]+", dice)
             for term in terms:
                 modifier = -1 if term[0] == '-' else 1
                 term = re.sub("[+-]", "", term)
@@ -22,10 +28,9 @@ class GenericDiceParser:
                         result = randrange(die_type)+1
                         rolls.append(str(result))
                         total += result
-
-            return f"{input} -> ({', '.join(rolls)}) = {total}"
+            return f"({dice}) -> ({', '.join(rolls)}) = {total} {purpose or ''}".strip()
         except:
-            return f"Failed to parse: {input}"
+            raise DiceException(f"Failed to parse: \"{dice}\"")
 
 
 class SAGDiceParser:
@@ -49,13 +54,6 @@ class SAGDiceParser:
                         output.append(result)
 
             return f"({', '.join(output)}) = {result}"
-        except:
-            raise Exception(f"Failed to parse: {input}")
-
-    def parse(self, input: str):
-        try:
-            parts = re.findall("[^0-9]*[0-9]*", input)
-
         except:
             raise Exception(f"Failed to parse: {input}")
 
