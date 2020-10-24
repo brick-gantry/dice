@@ -47,9 +47,9 @@ class DiceSocket:
                     action = jreq['action']
                     resp = getattr(self, f"_do_{action}")(jreq)
                 except DiceException as de:
-                    resp = {'action': 'display_error', 'error': de.message}
+                    resp = {'action': 'error', 'error': de.message}
                 except:
-                    resp = {'action': 'display_error', 'error': f"Failed to handle request: \"{req}\""}
+                    resp = {'action': 'error', 'error': f"Failed to handle request: \"{req}\""}
                     raise
                 finally:
                     if resp:

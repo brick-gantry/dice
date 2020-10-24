@@ -1,13 +1,13 @@
 let ws_uri = "ws://54.91.87.192:8765";
 let ws = null;
 
-(function connect() {
+(function ws_connect() {
   ws = new WebSocket(ws_uri);
   ws.onmessage = ws_onmessage;
   ws.onclose = function(e) {
     console.log('Socket is closed. Reconnect will be attempted in 1 second.');
     setTimeout(function() {
-      connect();
+      ws_connect();
     }, 1000);
   };
   ws.onerror = function(err) {
@@ -17,48 +17,36 @@ let ws = null;
 })();
 
 function ws_onmessage(message) {
-    let resp = JSON.parse(message.data);
-    switch (resp.action) {
-        case 'logon':
-            document.getElementById('logon_div').style.display = 'none';
-            document.getElementById('room_div').style.display = 'block';
-            document.getElementById('dice_log').value = resp.history.map(h => h.text).join("\n");
-            resp.macros.forEach(m => create_macro_button(m.dice, m.purpose));
-            break;
-        case 'append':
-            document.getElementById('dice_log').value += "\n" + resp.message;
-            break;
-        case 'append_chat':
-            document.getElementById('chat_log').value += "\n" + resp.message;
-            break;
-        case 'display_error':
-            document.getElementById('dice_log').value += "\n" + resp.error;
-            break;
-        case 'error':
-            console.error(message);
-            break;
+    try{
+        let resp = JSON.parse(message.data);
+        eval("action_"+resp.action+"(resp)");
+    }catch(err){
+        console.error(message);
+        throw err;
     }
 }
 
-function logon(){
+function user_logon(){
     let room = document.getElementById('room').value;
     let name = document.getElementById('name').value;
     let req = {'action': 'logon', 'room': room, 'name': name};
     ws.send(JSON.stringify(req));
 }
 
-function roll(dice, purpose){
-    dice = dice || document.getElementById('dice').value;
-    purpose = purpose || document.getElementById('purpose').value;
+function user_roll(){
+    let dice = document.getElementById('dice').value;
+    let purpose = document.getElementById('purpose').value;
     let req = {'action': 'roll', 'dice': dice, 'purpose': purpose};
     ws.send(JSON.stringify(req));
 }
 
-function create_macro_button(dice, purpose){
-    dice = dice || document.getElementById('dice').value;
-    purpose = purpose || document.getElementById('purpose').value;
+function user_create_macro_button(){
+    let dice = document.getElementById('dice').value;
+    let purpose = document.getElementById('purpose').value;
     let req = {'action': 'create_macro', 'dice': dice, 'purpose': purpose};
     ws.send(JSON.stringify(req));
+
+    // todo create after ack
 
     let macros_div = document.getElementById('macros');
     let macro_div = document.getElementById('macro_'+purpose+'_div');
@@ -84,5 +72,20 @@ function create_macro_button(dice, purpose){
         };
     }
     macro_button.innerText = purpose+" ("+dice+")";
-    macro_button.onclick = function(){roll(dice, purpose)};
+    macro_button.onclick = function(){user_roll(dice, purpose)};
+}
+
+function action_logon(resp){
+    document.getElementById('logon_div').style.display = 'none';
+    document.getElementById('room_div').style.display = 'block';
+    document.getElementById('dice_log').value = resp.history.map(h => h.text).join("\n");
+    resp.macros.forEach(m => user_create_macro_button(m.dice, m.purpose));
+}
+
+function action_append(resp){
+    document.getElementById('dice_log').value += "\n" + resp.message;
+}
+
+function action_error(resp){
+    console.error(resp);
 }

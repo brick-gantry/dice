@@ -6,16 +6,17 @@
     <div id="logon_div">
         <label for="room">Room</label><input id="room" value="test_room"/><br/>
         <label for="name">Name</label><input id="name" value="test_user"/><br/>
-        <button onclick="logon()">Log On</button><br/><br/>
+        <label for="name">Name</label><input id="password" type="password" value=""/><br/>
+        <button onclick="user_logon()">Log On</button><br/><br/>
     </div>
     <div id="room_div" style="display: none">
         <textarea id="dice_log" rows="30" cols="50"></textarea>
         <div>
             <label for="dice">Dice</label><input id="dice" value="1d20+3"/>
-            <button onclick="roll()">Roll</button>
+            <button onclick="user_roll()">Roll</button>
             <br>
             <label for="purpose">Purpose</label><input id="purpose" value="Attack"/>
-            <button onclick="create_macro_button()">Create Macro</button>
+            <button onclick="user_create_macro_button()">Create Macro</button>
             <div id="macros"></div>
         </div>
     </div>
