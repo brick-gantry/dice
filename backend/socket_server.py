@@ -33,7 +33,7 @@ class DiceServer:
 class DiceSocket:
     def __init__(self, websocket, path):
         self.websocket = websocket
-        self.data = RoomData()
+        self.data = None
 
     def cleanup(self):
         self.data.member_leave_room()
@@ -63,7 +63,7 @@ class DiceSocket:
         return True
 
     def _do_logon(self, req):
-        result = self.data.member_enter_room(req['room'], req['name'])
+        self.data = RoomData(req['room'], req['name'], req['password'])
 
         async def get_messages():
             while self.data.pubsub:
@@ -74,10 +74,11 @@ class DiceSocket:
                 await asyncio.sleep(message_dispatch_interval)
         asyncio.create_task(get_messages())
 
-        return {'action': 'logon', **result}
+        return {'action': 'enter_room', **self.data.get_current()}
 
     def _do_logoff(self, req):
         self.data.member_leave_room()
+        self.data = None
 
     def _do_roll(self, req):
         result = f"[{self.data.name}] {DiceParser.parse(req['dice'], req['purpose'])}"
@@ -88,3 +89,7 @@ class DiceSocket:
 
     def _do_delete_macro(self, req):
         self.data.delete_macro({'dice': req['dice'], 'purpose': req['purpose']})
+
+
+if __name__ == "__main__":
+    DiceServer().serve()

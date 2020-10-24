@@ -29,7 +29,8 @@ function ws_onmessage(message) {
 function user_logon(){
     let room = document.getElementById('room').value;
     let name = document.getElementById('name').value;
-    let req = {'action': 'logon', 'room': room, 'name': name};
+    let password = document.getElementById('password').value;
+    let req = {'action': 'logon', 'room': room, 'name': name, 'password': password};
     ws.send(JSON.stringify(req));
 }
 
@@ -75,7 +76,7 @@ function user_create_macro_button(){
     macro_button.onclick = function(){user_roll(dice, purpose)};
 }
 
-function action_logon(resp){
+function action_enter_room(resp){
     document.getElementById('logon_div').style.display = 'none';
     document.getElementById('room_div').style.display = 'block';
     document.getElementById('dice_log').value = resp.history.map(h => h.text).join("\n");
